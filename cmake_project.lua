@@ -221,10 +221,10 @@ function m.compileOptions(prj, cfg)
 	if #toolset.getcflags(cfg) > 0 or #toolset.getcxxflags(cfg) > 0 then
 		p.push("target_compile_options(\"%s\" PRIVATE", prj.name)
 		for _, flag in ipairs(toolset.getcflags(cfg)) do
-			p.w("$<$<COMPILE_LANGUAGE:C>:%s>", cmake.common.configName(cfg), flag)
+			p.w("$<$<COMPILE_LANGUAGE:C>:%s>", flag)
 		end
 		for _, flag in ipairs(toolset.getcxxflags(cfg)) do
-			p.w("$<$<COMPILE_LANGUAGE:CXX>:%s>", cmake.common.configName(cfg), flag)
+			p.w("$<$<COMPILE_LANGUAGE:CXX>:%s>", flag)
 		end
 		p.pop(")")
 	end
