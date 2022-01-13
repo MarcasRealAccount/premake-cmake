@@ -10,13 +10,13 @@ newaction({
 	
 	-- Capabilities
 	valid_kinds     = { "ConsoleApp", "WindowedApp", "Makefile", "SharedLib", "StaticLib", "Utility" },
-	valid_languages = { "C", "C++" }
-	valid_tools     = { "gcc", "clang", "msc" }
+	valid_languages = { "C", "C++" },
+	valid_tools     = { "gcc", "clang", "msc" },
 	
 	-- Workspace generation
 	onWorkspace = function(wks)
 		p.generate(wks, "CMakeLists.txt", p.extensions.cmake.generateWorkspace)
-	end
+	end,
 	
 	-- Project generation
 	onProject = function(prj)
