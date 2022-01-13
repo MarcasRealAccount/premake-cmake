@@ -42,7 +42,7 @@ function m.files(prj)
 	local tr = project.getsourcetree(prj)
 	tree.traverse(tr, {
 		onleaf = function(node, depth)
-			p.w("\"%s\"", path.getrelative(prj.workspace.location, ndoe.abspath))
+			p.w("\"%s\"", path.getrelative(prj.workspace.location, node.abspath))
 			
 			for cfg in project.eachconfig(prj) do
 				local filecfg = p.fileconfig.getconfig(node, cfg)
