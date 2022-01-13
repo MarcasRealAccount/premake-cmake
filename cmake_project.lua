@@ -115,9 +115,9 @@ end
 function m.outputDirs(prj, cfg)
 	p.push("set_target_properties(\"%s\" PROPERTIES", prj.name)
 	p.w("OUTPUT_NAME \"%s\"", cfg.buildtarget.basename)
-	p.w("ARCHIVE_OUTPUT_DIRECTORY \"../%s\"", path.getrelative(prj.workspace.location, cfg.buildtarget.directory))
-	p.w("LIBRARY_OUTPUT_DIRECTORY \"../%s\"", path.getrelative(prj.workspace.location, cfg.buildtarget.directory))
-	p.w("RUNTIME_OUTPUT_DIRECTORY \"../%s\"", path.getrelative(prj.workspace.location, cfg.buildtarget.directory))
+	p.w("ARCHIVE_OUTPUT_DIRECTORY \"%s\"", cfg.buildtarget.directory)
+	p.w("LIBRARY_OUTPUT_DIRECTORY \"%s\"", cfg.buildtarget.directory)
+	p.w("RUNTIME_OUTPUT_DIRECTORY \"%s\"", cfg.buildtarget.directory)
 	p.pop(")")
 end
 
