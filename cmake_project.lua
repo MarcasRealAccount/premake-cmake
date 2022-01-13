@@ -2,6 +2,7 @@ local p         = premake
 local project   = p.project
 local workspace = p.workspace
 local tree      = p.tree
+local config    = p.config
 local cmake     = p.extensions.cmake
 cmake.project   = {}
 local m         = cmake.project
