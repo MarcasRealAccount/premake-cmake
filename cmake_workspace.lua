@@ -53,11 +53,11 @@ end
 
 function m.defaultFlags(wks)
 	p.w("set(CMAKE_MSVC_RUNTIME_LIBRARY \"\")")
-	p.w("set(CMAKE_C_FLAGS \"\"")
-	p.w("set(CMAKE_CXX_FLAGS \"\"")
+	p.w("set(CMAKE_C_FLAGS \"\")")
+	p.w("set(CMAKE_CXX_FLAGS \"\")")
 	for _, buildType in ipairs(wks.buildTypes) do
-		p.w("set(CMAKE_C_FLAGS_%s \"\"", string.upper(buildType))
-		p.w("set(CMAKE_CXX_FLAGS_%s \"\"", string.upper(buildType))
+		p.w("set(CMAKE_C_FLAGS_%s \"\")", string.upper(buildType))
+		p.w("set(CMAKE_CXX_FLAGS_%s \"\")", string.upper(buildType))
 	end
 end
 
