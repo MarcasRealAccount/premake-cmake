@@ -327,7 +327,7 @@ local function addCustomCommand(fileconfig, filename)
 	if filename:len() > 0 and #fileconfig.buildInputs > 0 then
 		filename = filename .. " "
 	end
-	if filename:len() > or #fileconfig.buildInputs > 0 then
+	if filename:len() > 0 or #fileconfig.buildInputs > 0 then
 		p.w("DEPENDS %s", filename .. table.implode(fileconfig.buildInputs, "", "", " "))
 	end
 	p.pop(")")
