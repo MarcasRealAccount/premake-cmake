@@ -70,6 +70,7 @@ function m.projects(wks)
 	tree.traverse(tr, {
 		onleaf = function(n)
 			local prj = n.project
+			if prj.kind == "Utility" then return end
 			p.w("include(\"%s\")", path.getrelative(prj.workspace.location, p.filename(prj, ".cmake")))
 		end
 	})
