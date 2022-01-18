@@ -43,7 +43,7 @@ function m.files(prj)
 	local tr = project.getsourcetree(prj)
 	tree.traverse(tr, {
 		onleaf = function(node, depth)
-			p.w("\"%s\"", path.getrelative(prj.workspace.location, node.abspath))
+			p.w("\"%s\"", node.abspath)
 			
 			for cfg in project.eachconfig(prj) do
 				local filecfg = p.fileconfig.getconfig(node, cfg)
@@ -51,7 +51,7 @@ function m.files(prj)
 				
 				if p.fileconfig.hasFileSettings(filecfg) then
 					for _, output in ipairs(filecfg.buildOutputs) do
-						p.w("\"%s\"", path.getrelative(prj.workspace.location, output))
+						p.w("\"%s\"", output)
 					end
 					break
 				elseif rule then
@@ -63,7 +63,7 @@ function m.files(prj)
 					end
 					local rulecfg = p.context.extent(rule, environ)
 					for _, output in ipairs(rulecfg.buildOutputs) do
-						p.w("\"%s\"", path.getrelative(prj.workspace.location, output))
+						p.w("\"%s\"", output)
 					end
 					break
 				end
@@ -76,6 +76,7 @@ end
 m.configProps = function(prj, cfg)
 	return {
 		m.dependencies,
+		m.sourceFileProperties,
 		m.outputDirs,
 		m.includeDirs,
 		m.defines,
@@ -110,6 +111,41 @@ function m.dependencies(prj, cfg)
 		end
 		p.pop(")")
 	end
+end
+
+function m.sourceFileProperties(prj, cfg)
+	p.push("set_source_files_properties(")
+	local tr = project.getsourcetree(prj)
+	tree.traverse(tr, {
+		onleaf = function(node, depth)
+			for cfg in project.eachconfig(prj) do
+				local filecfg = p.fileconfig.getconfig(node, cfg)
+				local rule    = p.global.getRuleForFile(node.name, prj.rules)
+				
+				if p.fileconfig.hasFileSettings(filecfg) then
+					for _, output in ipairs(filecfg.buildOutputs) do
+						p.w("\"%s\"", output)
+					end
+					break
+				elseif rule then
+					local environ = table.shallowcopy(filecfg.environ)
+					
+					if rule.propertydefinition then
+						p.rule.prepareEnvironment(rule, environ, cfg)
+						p.rule.prepareEnvironment(rule, environ, filecfg)
+					end
+					local rulecfg = p.context.extent(rule, environ)
+					for _, output in ipairs(rulecfg.buildOutputs) do
+						p.w("\"%s\"", output)
+					end
+					break
+				end
+			end
+		end
+	}, true)
+	p.w("PROPERTIES")
+	p.w("GENERATED true")
+	p.pop(")")
 end
 
 function m.outputDirs(prj, cfg)
@@ -313,20 +349,23 @@ function m.prelinkCommands(prj, cfg)
 	end
 end
 
-local function addCustomCommand(fileconfig, filename)
+local function addCustomCommand(cfg, fileconfig, filename)
 	if #fileconfig.buildcommands == 0 or #fileconfig.buildOutputs == 0 then
 		return
 	end
 	
-	p.push("add_custom_command(TARGET OUTPUT %s", table.implode(project.getrelative(cfg.project, fileconfig.buildOutputs), "", "", " "))
+	p.push("add_custom_command(TARGET OUTPUT %s", table.implode(fileconfig.buildOutputs, "", "", " "))
 	if fileconfig.buildmessage then
 		p.w("COMMAND %s", cmake.common.fixSingleQuotes(os.translateCommandsAndPaths("{ECHO} " .. fileconfig.buildmessage, cfg.project.basedir, cfg.project.location)))
 	end
 	for _, command in ipairs(cmake.common.fixSingleQuotes(os.translateCommandsAndPaths(fileconfig.buildCommands, cfg.project.basedir, cfg.project.location))) do
 		p.w("COMMAND %s", command)
 	end
-	if filename:len() > 0 and #fileconfig.buildInputs > 0 then
-		filename = filename .. " "
+	if filename:len() > 0 then
+		filename = cfg.project.location .. "/" .. filename
+		if #fileconfig.buildInputs > 0 then
+			filename = filename .. " "
+		end	
 	end
 	if filename:len() > 0 or #fileconfig.buildInputs > 0 then
 		p.w("DEPENDS %s", filename .. table.implode(fileconfig.buildInputs, "", "", " "))
@@ -342,7 +381,7 @@ function m.customCommands(prj, cfg)
 			local rule    = p.global.getRuleForFile(node.name, prj.rules)
 			
 			if p.fileconfig.hasFileSettings(filecfg) then
-				addCustomCommand(filecfg, node.relpath)
+				addCustomCommand(cfg, filecfg, node.relpath)
 			elseif rule then
 				local environ = table.shallowcopy(filecfg.environ)
 				
@@ -351,9 +390,9 @@ function m.customCommands(prj, cfg)
 					p.rule.prepareEnvironment(rule, environ, filecfg)
 				end
 				local rulecfg = p.context.extent(rule, environ)
-				addCustomCommand(rulecfg, node.relpath)
+				addCustomCommand(cfg, rulecfg, node.relpath)
 			end
 		end
 	})
-	addCustomCommand(cfg, "")
+	addCustomCommand(cfg, cfg, "")
 end
