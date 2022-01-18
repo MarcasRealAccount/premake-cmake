@@ -48,6 +48,10 @@ function m.fixSingleQuotes(command)
 	end
 end
 
+function m.escapeStrings(str)
+	return str:gsub("\"", "\\\"")
+end
+
 function m.isFramework(lib)
 	return path.getextension(lib) == ".framework"
 end
