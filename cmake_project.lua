@@ -16,6 +16,7 @@ m.props = function(prj)
 end
 
 function cmake.generateProject(prj)
+	verbosef("Generating project %s", prj.name)
 	p.indent("\t")
 	
 	local oldGetDefaultSeparator = path.getDefaultSeparator
@@ -24,6 +25,7 @@ function cmake.generateProject(prj)
 	p.callArray(m.props, prj)
 	
 	path.getDefaultSeparator = oldGetDefaultSeparator
+	verbosef("Generated project %s", prj.name)
 end
 
 function m.kind(prj)
