@@ -120,27 +120,23 @@ function m.sourceFileProperties(prj, cfg)
 	local tr = project.getsourcetree(prj)
 	tree.traverse(tr, {
 		onleaf = function(node, depth)
-			for cfg in project.eachconfig(prj) do
-				local filecfg = p.fileconfig.getconfig(node, cfg)
-				local rule    = p.global.getRuleForFile(node.name, prj.rules)
-				
-				if p.fileconfig.hasFileSettings(filecfg) then
-					for _, output in ipairs(filecfg.buildOutputs) do
-						p.w("\"%s\"", output)
-					end
-					break
-				elseif rule then
-					local environ = table.shallowcopy(filecfg.environ)
-					
-					if rule.propertydefinition then
-						p.rule.prepareEnvironment(rule, environ, cfg)
-						p.rule.prepareEnvironment(rule, environ, filecfg)
-					end
-					local rulecfg = p.context.extent(rule, environ)
-					for _, output in ipairs(rulecfg.buildOutputs) do
-						p.w("\"%s\"", output)
-					end
-					break
+			local filecfg = p.fileconfig.getconfig(node, cfg)
+			local rule    = p.global.getRuleForFile(node.name, prj.rules)
+
+			if p.fileconfig.hasFileSettings(filecfg) then
+				for _, output in ipairs(filecfg.buildOutputs) do
+					p.w("\"%s\"", output)
+				end
+			elseif rule then
+				local environ = table.shallowcopy(filecfg.environ)
+
+				if rule.propertydefinition then
+					p.rule.prepareEnvironment(rule, environ, cfg)
+					p.rule.prepareEnvironment(rule, environ, filecfg)
+				end
+				local rulecfg = p.context.extent(rule, environ)
+				for _, output in ipairs(rulecfg.buildOutputs) do
+					p.w("\"%s\"", output)
 				end
 			end
 		end
@@ -148,6 +144,32 @@ function m.sourceFileProperties(prj, cfg)
 	p.w("PROPERTIES")
 	p.w("GENERATED true")
 	p.pop(")")
+
+	local fileLangs = {}
+	tree.traverse(tr, {
+		onleaf = function(node, depth)
+			local filecfg = p.fileconfig.getconfig(node, cfg)
+
+			if filecfg.compileas then
+				if not fileLangs[filecfg.compileas] then fileLangs[filecfg.compileas] = {} end
+				local fileLang = fileLangs[filecfg.compileas]
+				fileLang[node.abspath] = filecfg
+			end
+		end
+	}, true)
+
+	for lang, files in pairs(fileLangs) do
+		if not cmake.common.compileasLangs[lang] then
+			error("CMake generator does not support compileas langauge " .. lang .. "!")
+		end
+		p.push("set_source_files_properties(")
+		for path, file in pairs(files) do
+			p.w("\"%s\"", path)
+		end
+		p.w("PROPERTIES")
+		p.w("LANGUAGE %s", cmake.common.compileasLangs[lang])
+		p.pop(")")
+	end
 end
 
 function m.outputDirs(prj, cfg)
@@ -275,6 +297,7 @@ function m.cppStandard(prj, cfg)
 		local lto        = iif(cfg.flags.LinkTimeOptimization, "True", "False")
 		
 		p.push("set_target_properties(\"%s\" PROPERTIES", prj.name)
+		verbosef("%s CXX_STANDARD %s", prj.name, cfg.cppdialect)
 		p.w("CXX_STANDARD %s", cmake.common.cppStandards[cfg.cppdialect])
 		p.w("CXX_STANDARD_REQUIRED YES")
 		p.w("CXX_EXTENSIONS %s", extensions)

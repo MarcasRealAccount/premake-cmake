@@ -9,6 +9,7 @@ local m         = cmake.workspace
 m.props = function(wks)
 	return {
 		m.minimumRequiredVersion,
+		m.enableLanguages,
 		m.buildTypes,
 		m.defaultFlags,
 		m.name,
@@ -30,6 +31,11 @@ end
 
 function m.minimumRequiredVersion(wks)
 	p.w("cmake_minimum_required(VERSION 3.16)")
+end
+
+function m.enableLanguages(wks)
+	p.w("enable_language(OBJC)")
+	p.w("enable_language(OBJCXX)")
 end
 
 function m.buildTypes(wks)

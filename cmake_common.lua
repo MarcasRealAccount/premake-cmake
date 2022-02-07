@@ -12,11 +12,19 @@ m.cppStandards = {
 	["C++14"]   = "14",
 	["C++17"]   = "17",
 	["C++20"]   = "20",
+	["C++2a"]   = "20",
 	["gnu++98"] = "98",
 	["gnu++11"] = "11",
 	["gnu++14"] = "14",
 	["gnu++17"] = "17",
 	["gnu++20"] = "20"
+}
+
+m.compileasLangs = {
+	["C"]               = "C",
+	["C++"]             = "CXX",
+	["Objective-C"]     = "OBJC",
+	["Objective-C++"]   = "OBJCXX"
 }
 
 function m.configName(config, includePlatform)
