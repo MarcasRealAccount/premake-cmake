@@ -65,5 +65,52 @@ function m.isFramework(lib)
 end
 
 function m.getFrameworkName(framework)
-	return string.sub(framework, 1, string.find(framework, "%.") - 1)
+	return framework:sub(1, string.find(framework, "%.") - 1)
+end
+
+---
+-- Debugging
+---
+
+m.timers = {}
+
+function m.createTimer(functionName, args)
+	if _OPTIONS["verbose"] then
+		local timer = {
+			functionName = functionName,
+			args         = args,
+			startTime    = os.clock(),
+			stopTime     = nil
+		}
+
+		if not m.timers[timer.functionName] then m.timers[timer.functionName] = { total = 0.0 } end
+
+		timer.stop = function()
+			timer.stopTime = os.clock()
+			local delta = timer.stopTime - timer.startTime
+			m.timers[timer.functionName].total = m.timers[timer.functionName].total + delta
+			if timer.args then
+				printf("%s(%s) (%.4f -> %.4f): %.4f", timer.functionName, table.concat(timer.args, ", "), timer.startTime, timer.stopTime, delta)
+			end
+		end
+
+		return timer
+	else
+		local timer = {
+			functionName = functionName,
+			args         = args,
+			startTime    = 0.0,
+			endTime      = nil
+		}
+		stop = function()
+			timer.endTime = 0.0
+		end
+		return timer
+	end
+end
+
+function m.printTimers()
+	for k, v in pairs(m.timers) do
+		printf("%s %.4f", k, v.total)
+	end
 end

@@ -22,6 +22,11 @@ newaction({
 	onProject = function(prj)
 		if prj.kind == "Utility" then return end
 		p.generate(prj, ".cmake", p.extensions.cmake.generateProject)
+	end,
+
+	-- End
+	onEnd = function()
+		p.extensions.cmake.common.printTimers()
 	end
 })
 

@@ -16,7 +16,7 @@ m.props = function(prj)
 end
 
 function cmake.generateProject(prj)
-	verbosef("Generating project %s", prj.name)
+	local timer = cmake.common.createTimer("p.extensions.cmake.generateProject", { prj.name })
 	p.indent("\t")
 	
 	local oldGetDefaultSeparator = path.getDefaultSeparator
@@ -25,10 +25,11 @@ function cmake.generateProject(prj)
 	p.callArray(m.props, prj)
 	
 	path.getDefaultSeparator = oldGetDefaultSeparator
-	verbosef("Generated project %s", prj.name)
+	timer.stop()
 end
 
 function m.kind(prj)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.kind", { prj.name })
 	if prj.kind == "StaticLib" then
 		p.push("add_library(\"%s\" STATIC", prj.name)
 	elseif prj.kind == "SharedLib" then
@@ -39,9 +40,11 @@ function m.kind(prj)
 		end
 		p.push("add_executable(\"%s\"", prj.name)
 	end
+	timer.stop()
 end
 
 function m.files(prj)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.files", { prj.name })
 	local tr = project.getsourcetree(prj)
 	tree.traverse(tr, {
 		onleaf = function(node, depth)
@@ -73,6 +76,7 @@ function m.files(prj)
 		end
 	}, true)
 	p.pop(")")
+	timer.stop()
 end
 
 m.configProps = function(prj, cfg)
@@ -97,14 +101,17 @@ m.configProps = function(prj, cfg)
 end
 
 function m.configs(prj)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.configs", { prj.name })
 	for cfg in project.eachconfig(prj) do
 		p.push("if(CMAKE_BUILD_TYPE STREQUAL \"%s\")", cmake.common.configName(cfg, #prj.workspace.platforms > 1))
 		p.callArray(m.configProps, prj, cfg)
 		p.pop("endif()")
 	end
+	timer.stop()
 end
 
 function m.dependencies(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.dependencies", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	local dependencies = project.getdependencies(prj, cfg)
 	if #dependencies > 0 then
 		p.push("add_dependencies(\"%s\"", prj.name)
@@ -113,9 +120,11 @@ function m.dependencies(prj, cfg)
 		end
 		p.pop(")")
 	end
+	timer.stop()
 end
 
 function m.sourceFileProperties(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.sourceFileProperties", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	p.push("set_source_files_properties(")
 	local tr = project.getsourcetree(prj)
 	tree.traverse(tr, {
@@ -170,18 +179,22 @@ function m.sourceFileProperties(prj, cfg)
 		p.w("LANGUAGE %s", cmake.common.compileasLangs[lang])
 		p.pop(")")
 	end
+	timer.stop()
 end
 
 function m.outputDirs(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.outputDirs", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	p.push("set_target_properties(\"%s\" PROPERTIES", prj.name)
 	p.w("OUTPUT_NAME \"%s\"", cfg.buildtarget.basename)
 	p.w("ARCHIVE_OUTPUT_DIRECTORY \"%s\"", cfg.buildtarget.directory)
 	p.w("LIBRARY_OUTPUT_DIRECTORY \"%s\"", cfg.buildtarget.directory)
 	p.w("RUNTIME_OUTPUT_DIRECTORY \"%s\"", cfg.buildtarget.directory)
 	p.pop(")")
+	timer.stop()
 end
 
 function m.includeDirs(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.includeDirs", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	if #cfg.sysincludedirs > 0 then
 		p.push("target_include_directories(\"%s\" SYSTEM PRIVATE", prj.name)
 		for _, includedir in ipairs(cfg.sysincludedirs) do
@@ -206,9 +219,11 @@ function m.includeDirs(prj, cfg)
 		p.w("target_compile_options(\"%s\" PRIVATE %s)", prj.name, table.implode(p.tools.gcc.getforceincludes(cfg), "", "", " "))
 		p.pop("endif()")
 	end
+	timer.stop()
 end
 
 function m.defines(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.defines", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	if #cfg.defines > 0 then
 		p.push("target_compile_definitions(\"%s\" PRIVATE", prj.name)
 		for _, define in ipairs(cfg.defines) do
@@ -216,9 +231,11 @@ function m.defines(prj, cfg)
 		end
 		p.pop(")")
 	end
+	timer.stop()
 end
 
 function m.libDirs(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.libDirs", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	if #cfg.libdirs > 0 then
 		p.push("target_link_directories(\"%s\" PRIVATE", prj.name)
 		for _, libdir in ipairs(cfg.libdirs) do
@@ -226,9 +243,11 @@ function m.libDirs(prj, cfg)
 		end
 		p.pop(")")
 	end
+	timer.stop()
 end
 
 function m.libs(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.libs", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	local uselinkgroups = isclangorgcc and cfg.linkgroups == p.ON
 	if uselinkgroups or #config.getlinks(cfg, "dependencies", "object") > 0 or #config.getlinks(cfg, "system", "fullpath") > 0 then
 		p.push("target_link_libraries(\"%s\"", prj.name)
@@ -254,9 +273,11 @@ function m.libs(prj, cfg)
 		end
 		p.pop(")")
 	end
+	timer.stop()
 end
 
 function m.buildOptions(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.buildOptions", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	local options = ""
 	for _, option in ipairs(cfg.buildoptions) do
 		options = options .. option .. " "
@@ -264,9 +285,11 @@ function m.buildOptions(prj, cfg)
 	if options:len() > 0 then
 		p.w("set_target_properties(\"%s\" PROPERTIES COMPILE_FLAGS %s)", prj.name, options)
 	end
+	timer.stop()
 end
 
 function m.linkOptions(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.linkOptions", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	local options = ""
 	for _, option in ipairs(cfg.linkoptions) do
 		options = options .. option .. " "
@@ -274,9 +297,11 @@ function m.linkOptions(prj, cfg)
 	if options:len() > 0 then
 		p.w("set_target_properties(\"%s\" PROPERTIES LINK_FLAGS %s)", prj.name, options)
 	end
+	timer.stop()
 end
 
 function m.compileOptions(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.compileOptions", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	local toolset = cmake.common.getCompiler(cfg)
 	if #toolset.getcflags(cfg) > 0 or #toolset.getcxxflags(cfg) > 0 then
 		p.push("target_compile_options(\"%s\" PRIVATE", prj.name)
@@ -288,16 +313,17 @@ function m.compileOptions(prj, cfg)
 		end
 		p.pop(")")
 	end
+	timer.stop()
 end
 
 function m.cppStandard(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.cppStandard", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	if (cfg.cppdialect and cfg.cppdialect:len() > 0) or cfg.cppdialect == "Default" then
 		local extensions = iif(cfg.cppdialect:find("^gnu") == nil, "NO", "YES")
 		local pic        = iif(cfg.pic == "On", "True", "False")
 		local lto        = iif(cfg.flags.LinkTimeOptimization, "True", "False")
 		
 		p.push("set_target_properties(\"%s\" PROPERTIES", prj.name)
-		verbosef("%s CXX_STANDARD %s", prj.name, cfg.cppdialect)
 		p.w("CXX_STANDARD %s", cmake.common.cppStandards[cfg.cppdialect])
 		p.w("CXX_STANDARD_REQUIRED YES")
 		p.w("CXX_EXTENSIONS %s", extensions)
@@ -305,9 +331,11 @@ function m.cppStandard(prj, cfg)
 		p.w("INTERPROCEDURAL_OPTIMIZATION %s", lto)
 		p.pop(")")
 	end
+	timer.stop()
 end
 
 function m.pch(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.pch", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	if not cfg.flags.NoPCH and cfg.pchheader then
 		local pch   = cfg.pchheader
 		local found = false
@@ -333,9 +361,11 @@ function m.pch(prj, cfg)
 		
 		p.w("target_precompile_headers(\"%s\" PRIVATE \"%s\")", prj.name, path.getabsolute(pch))
 	end
+	timer.stop()
 end
 
 function m.prebuildCommands(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.prebuildCommands", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	if cfg.prebuildmessage or #cfg.prebuildcommands > 0 then
 		p.push("add_custom_target(prebuild-%s", prj.name)
 		if cfg.prebuildmessage then
@@ -347,9 +377,11 @@ function m.prebuildCommands(prj, cfg)
 		p.pop(")")
 		p.w("add_dependencies(\"%s\" prebuild-%s)", prj.name, prj.name)
 	end
+	timer.stop()
 end
 
 function m.postbuildCommands(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.postbuildCommands", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	if cfg.postbuildmessage or #cfg.postbuildcommands > 0 then
 		p.push("add_custom_target(postbuild-%s", prj.name)
 		if cfg.postbuildmessage then
@@ -361,9 +393,11 @@ function m.postbuildCommands(prj, cfg)
 		p.pop(")")
 		p.w("add_dependencies(\"%s\" postbuild-%s)", prj.name, prj.name)
 	end
+	timer.stop()
 end
 
 function m.prelinkCommands(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.prelinkCommands", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	if cfg.prelinkmessage or #cfg.prelinkcommands > 0 then
 		p.push("add_custom_command(TARGET \"%s\"", prj.name)
 		p.w("PRE_LINK")
@@ -372,9 +406,11 @@ function m.prelinkCommands(prj, cfg)
 		end
 		p.pop(")")
 	end
+	timer.stop()
 end
 
 local function addCustomCommand(cfg, fileconfig, filename)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.addCustomCommand")
 	if #fileconfig.buildcommands == 0 or #fileconfig.buildOutputs == 0 then
 		return
 	end
@@ -396,9 +432,11 @@ local function addCustomCommand(cfg, fileconfig, filename)
 		p.w("DEPENDS %s", filename .. table.implode(fileconfig.buildInputs, "", "", " "))
 	end
 	p.pop(")")
+	timer.stop()
 end
 
 function m.customCommands(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.customCommands", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	local tr = project.getsourcetree(prj)
 	p.tree.traverse(tr, {
 		onleaf = function(node, depth)
@@ -420,4 +458,5 @@ function m.customCommands(prj, cfg)
 		end
 	})
 	addCustomCommand(cfg, cfg, "")
+	timer.stop()
 end
