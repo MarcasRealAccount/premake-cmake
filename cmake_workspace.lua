@@ -18,6 +18,7 @@ m.props = function(wks)
 end
 
 function cmake.generateWorkspace(wks)
+	local timer = cmake.common.createTimer("p.extensions.cmake.generateWorkspace", { wks.name })
 	p.indent("\t")
 	p.utf8()
 	
@@ -27,18 +28,24 @@ function cmake.generateWorkspace(wks)
 	end
 	
 	p.callArray(m.props, wks, buildTypes)
+	timer.stop()
 end
 
 function m.minimumRequiredVersion(wks)
+	local timer = cmake.common.createTimer("p.extensions.cmake.workspace.minimumRequiredVersion", { wks.name })
 	p.w("cmake_minimum_required(VERSION 3.16)")
+	timer.stop()
 end
 
 function m.enableLanguages(wks)
+	local timer = cmake.common.createTimer("p.extensions.cmake.workspace.enableLanguages", { wks.name })
 	p.w("enable_language(OBJC)")
 	p.w("enable_language(OBJCXX)")
+	timer.stop()
 end
 
 function m.buildTypes(wks)
+	local timer = cmake.common.createTimer("p.extensions.cmake.workspace.buildTypes", { wks.name })
 	p.w("set(PREMAKE_BUILD_TYPES \"%s\")", table.concat(wks.buildTypes, "\" \""))
 	p.w("get_property(multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)")
 	p.push("if(multi_config)")
@@ -55,9 +62,11 @@ function m.buildTypes(wks)
 	p.pop(")")
 	p.pop("endif()")
 	p.pop("endif()")
+	timer.stop()
 end
 
 function m.defaultFlags(wks)
+	local timer = cmake.common.createTimer("p.extensions.cmake.workspace.defaultFlags", { wks.name })
 	p.w("set(CMAKE_MSVC_RUNTIME_LIBRARY \"\")")
 	p.w("set(CMAKE_C_FLAGS \"\")")
 	p.w("set(CMAKE_CXX_FLAGS \"\")")
@@ -65,13 +74,17 @@ function m.defaultFlags(wks)
 		p.w("set(CMAKE_C_FLAGS_%s \"\")", string.upper(buildType))
 		p.w("set(CMAKE_CXX_FLAGS_%s \"\")", string.upper(buildType))
 	end
+	timer.stop()
 end
 
 function m.name(wks)
+	local timer = cmake.common.createTimer("p.extensions.cmake.workspace.name", { wks.name })
 	p.w("project(\"%s\")", wks.name)
+	timer.stop()
 end
 
 function m.projects(wks)
+	local timer = cmake.common.createTimer("p.extensions.cmake.workspace.projects", { wks.name })
 	local tr = workspace.grouptree(wks)
 	tree.traverse(tr, {
 		onleaf = function(n)
@@ -80,4 +93,5 @@ function m.projects(wks)
 			p.w("include(\"%s\")", path.getrelative(prj.workspace.location, p.filename(prj, ".cmake")))
 		end
 	})
+	timer.stop()
 end
