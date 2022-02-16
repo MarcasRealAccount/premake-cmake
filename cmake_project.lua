@@ -16,6 +16,11 @@ m.props = function(prj)
 end
 
 function cmake.generateProject(prj)
+	prj.__cmake                = {}
+	prj.__cmake.files          = {}
+	prj.__cmake.generatedFiles = {}
+	prj.__cmake.fileLangs      = {}
+	prj.__cmake.customCommands = {}
 	local timer = cmake.common.createTimer("p.extensions.cmake.generateProject", { prj.name })
 	p.indent("\t")
 	
@@ -48,16 +53,26 @@ function m.files(prj)
 	local tr = project.getsourcetree(prj)
 	tree.traverse(tr, {
 		onleaf = function(node, depth)
-			p.w("\"%s\"", node.abspath)
-			
+			table.insert(prj.__cmake.files, node.abspath)
+
 			for cfg in project.eachconfig(prj) do
 				local filecfg = p.fileconfig.getconfig(node, cfg)
 				local rule    = p.global.getRuleForFile(node.name, prj.rules)
-				
+				if filecfg.compileas then
+					if not prj.__cmake.fileLangs[filecfg.compileas] then prj.__cmake.fileLangs[filecfg.compileas] = {} end
+					local fileLang = prj.__cmake.fileLangs[filecfg.compileas]
+					fileLang[node.abspath] = filecfg
+				end
+
 				if p.fileconfig.hasFileSettings(filecfg) then
 					for _, output in ipairs(filecfg.buildOutputs) do
-						p.w("\"%s\"", output)
+						table.insert(prj.__cmake.files, output)
+						table.insert(prj.__cmake.generatedFiles, output)
 					end
+					table.insert(prj.__cmake.customCommands, {
+						cfg     = filecfg,
+						relpath = node.relpath
+					})
 					break
 				elseif rule then
 					local environ = table.shallowcopy(filecfg.environ)
@@ -68,13 +83,22 @@ function m.files(prj)
 					end
 					local rulecfg = p.context.extent(rule, environ)
 					for _, output in ipairs(rulecfg.buildOutputs) do
-						p.w("\"%s\"", output)
+						table.insert(prj.__cmake.files, output)
+						table.insert(prj.__cmake.generatedFiles, output)
 					end
+					table.insert(prj.__cmake.customCommands, {
+						cfg     = rulecfg,
+						relpath = node.relpath
+					})
 					break
 				end
 			end
 		end
 	}, true)
+
+	for _, v in ipairs(prj.__cmake.files) do
+		p.w("\"%s\"", v)
+	end
 	p.pop(")")
 	timer.stop()
 end
@@ -126,48 +150,14 @@ end
 function m.sourceFileProperties(prj, cfg)
 	local timer = cmake.common.createTimer("p.extensions.cmake.project.sourceFileProperties", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	p.push("set_source_files_properties(")
-	local tr = project.getsourcetree(prj)
-	tree.traverse(tr, {
-		onleaf = function(node, depth)
-			local filecfg = p.fileconfig.getconfig(node, cfg)
-			local rule    = p.global.getRuleForFile(node.name, prj.rules)
-
-			if p.fileconfig.hasFileSettings(filecfg) then
-				for _, output in ipairs(filecfg.buildOutputs) do
-					p.w("\"%s\"", output)
-				end
-			elseif rule then
-				local environ = table.shallowcopy(filecfg.environ)
-
-				if rule.propertydefinition then
-					p.rule.prepareEnvironment(rule, environ, cfg)
-					p.rule.prepareEnvironment(rule, environ, filecfg)
-				end
-				local rulecfg = p.context.extent(rule, environ)
-				for _, output in ipairs(rulecfg.buildOutputs) do
-					p.w("\"%s\"", output)
-				end
-			end
-		end
-	}, true)
+	for _, v in ipairs(prj.__cmake.generatedFiles) do
+		p.w("\"%s\"", v)
+	end
 	p.w("PROPERTIES")
 	p.w("GENERATED true")
 	p.pop(")")
 
-	local fileLangs = {}
-	tree.traverse(tr, {
-		onleaf = function(node, depth)
-			local filecfg = p.fileconfig.getconfig(node, cfg)
-
-			if filecfg.compileas then
-				if not fileLangs[filecfg.compileas] then fileLangs[filecfg.compileas] = {} end
-				local fileLang = fileLangs[filecfg.compileas]
-				fileLang[node.abspath] = filecfg
-			end
-		end
-	}, true)
-
-	for lang, files in pairs(fileLangs) do
+	for lang, files in pairs(prj.__cmake.fileLangs) do
 		if not cmake.common.compileasLangs[lang] then
 			error("CMake generator does not support compileas langauge " .. lang .. "!")
 		end
@@ -437,26 +427,9 @@ end
 
 function m.customCommands(prj, cfg)
 	local timer = cmake.common.createTimer("p.extensions.cmake.project.customCommands", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
-	local tr = project.getsourcetree(prj)
-	p.tree.traverse(tr, {
-		onleaf = function(node, depth)
-			local filecfg = p.fileconfig.getconfig(node, cfg)
-			local rule    = p.global.getRuleForFile(node.name, prj.rules)
-			
-			if p.fileconfig.hasFileSettings(filecfg) then
-				addCustomCommand(cfg, filecfg, node.relpath)
-			elseif rule then
-				local environ = table.shallowcopy(filecfg.environ)
-				
-				if rule.propertydefinition then
-					p.rule.prepareEnvironment(rule, environ, cfg)
-					p.rule.prepareEnvironment(rule, environ, filecfg)
-				end
-				local rulecfg = p.context.extent(rule, environ)
-				addCustomCommand(cfg, rulecfg, node.relpath)
-			end
-		end
-	})
+	for _, v in ipairs(prj.__cmake.customCommands) do
+		addCustomCommand(cfg, v.cfg, v.relpath)
+	end
 	addCustomCommand(cfg, cfg, "")
 	timer.stop()
 end
