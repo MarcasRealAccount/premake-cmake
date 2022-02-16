@@ -102,7 +102,7 @@ function m.createTimer(functionName, args)
 			startTime    = 0.0,
 			endTime      = nil
 		}
-		stop = function()
+		timer.stop = function()
 			timer.endTime = 0.0
 		end
 		return timer
