@@ -55,42 +55,45 @@ function m.files(prj)
 		onleaf = function(node, depth)
 			table.insert(prj.__cmake.files, node.abspath)
 
-			for cfg in project.eachconfig(prj) do
-				local filecfg = p.fileconfig.getconfig(node, cfg)
-				local rule    = p.global.getRuleForFile(node.name, prj.rules)
-				if filecfg.compileas then
-					if not prj.__cmake.fileLangs[filecfg.compileas] then prj.__cmake.fileLangs[filecfg.compileas] = {} end
-					local fileLang = prj.__cmake.fileLangs[filecfg.compileas]
-					fileLang[node.abspath] = filecfg
-				end
+			if node.configs then
+				for cfg in project.eachconfig(prj) do
+					local filecfg = p.fileconfig.getconfig(node, cfg)
+					local rule    = p.global.getRuleForFile(node.name, prj.rules)
 
-				if p.fileconfig.hasFileSettings(filecfg) then
-					for _, output in ipairs(filecfg.buildOutputs) do
-						table.insert(prj.__cmake.files, output)
-						table.insert(prj.__cmake.generatedFiles, output)
+					if filecfg.compileas then
+						if not prj.__cmake.fileLangs[filecfg.compileas] then prj.__cmake.fileLangs[filecfg.compileas] = {} end
+						local fileLang = prj.__cmake.fileLangs[filecfg.compileas]
+						fileLang[node.abspath] = filecfg
 					end
-					table.insert(prj.__cmake.customCommands, {
-						cfg     = filecfg,
-						relpath = node.relpath
-					})
-					break
-				elseif rule then
-					local environ = table.shallowcopy(filecfg.environ)
-					
-					if rule.propertydefinition then
-						p.rule.prepareEnvironment(rule, environ, cfg)
-						p.rule.prepareEnvironment(rule, environ, filecfg)
+
+					if p.fileconfig.hasFileSettings(filecfg) then
+						for _, output in ipairs(filecfg.buildOutputs) do
+							table.insert(prj.__cmake.files, output)
+							table.insert(prj.__cmake.generatedFiles, output)
+						end
+						table.insert(prj.__cmake.customCommands, {
+							cfg     = filecfg,
+							relpath = node.relpath
+						})
+						break
+					elseif rule then
+						local environ = table.shallowcopy(filecfg.environ)
+
+						if rule.propertydefinition then
+							p.rule.prepareEnvironment(rule, environ, cfg)
+							p.rule.prepareEnvironment(rule, environ, filecfg)
+						end
+						local rulecfg = p.context.extent(rule, environ)
+						for _, output in ipairs(rulecfg.buildOutputs) do
+							table.insert(prj.__cmake.files, output)
+							table.insert(prj.__cmake.generatedFiles, output)
+						end
+						table.insert(prj.__cmake.customCommands, {
+							cfg     = rulecfg,
+							relpath = node.relpath
+						})
+						break
 					end
-					local rulecfg = p.context.extent(rule, environ)
-					for _, output in ipairs(rulecfg.buildOutputs) do
-						table.insert(prj.__cmake.files, output)
-						table.insert(prj.__cmake.generatedFiles, output)
-					end
-					table.insert(prj.__cmake.customCommands, {
-						cfg     = rulecfg,
-						relpath = node.relpath
-					})
-					break
 				end
 			end
 		end
@@ -200,15 +203,7 @@ function m.includeDirs(prj, cfg)
 		end
 		p.pop(")")
 	end
-	
-	if #cfg.forceincludes > 0 then
-		p.push("if (MSVC)")
-		p.w("target_compile_options(\"%s\" PRIVATE %s)", prj.name, table.implode(p.tools.msc.getforceincludes(cfg), "", "", " "))
-		p.pop()
-		p.push("else()")
-		p.w("target_compile_options(\"%s\" PRIVATE %s)", prj.name, table.implode(p.tools.gcc.getforceincludes(cfg), "", "", " "))
-		p.pop("endif()")
-	end
+
 	timer.stop()
 end
 
@@ -292,13 +287,20 @@ end
 
 function m.compileOptions(prj, cfg)
 	local timer = cmake.common.createTimer("p.extensions.cmake.project.compileOptions", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
-	local toolset = cmake.common.getCompiler(cfg)
-	if #toolset.getcflags(cfg) > 0 or #toolset.getcxxflags(cfg) > 0 then
+	local toolset       = cmake.common.getCompiler(cfg)
+	local cflags        = toolset.getcflags(cfg)
+	local cxxflags      = toolset.getcxxflags(cfg)
+	local forceIncludes = toolset.getforceincludes(cfg)
+	if #cflags > 0 or #cxxflags > 0 then
 		p.push("target_compile_options(\"%s\" PRIVATE", prj.name)
-		for _, flag in ipairs(toolset.getcflags(cfg)) do
+		for _, flag in ipairs(cflags) do
 			p.w("$<$<COMPILE_LANGUAGE:C>:%s>", flag)
 		end
-		for _, flag in ipairs(toolset.getcxxflags(cfg)) do
+		for _, flag in ipairs(cxxflags) do
+			p.w("$<$<COMPILE_LANGUAGE:CXX>:%s>", flag)
+		end
+		for _, flag in ipairs(forceIncludes) do
+			p.w("$<$<COMPILE_LANGUAGE:C>:%s>", flag)
 			p.w("$<$<COMPILE_LANGUAGE:CXX>:%s>", flag)
 		end
 		p.pop(")")
