@@ -265,10 +265,12 @@ function m.buildOptions(prj, cfg)
 	local timer = cmake.common.createTimer("p.extensions.cmake.project.buildOptions", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	local options = ""
 	for _, option in ipairs(cfg.buildoptions) do
-		options = options .. option .. " "
+		options = options .. option .. "\n"
 	end
 	if options:len() > 0 then
-		p.w("set_target_properties(\"%s\" PROPERTIES COMPILE_FLAGS %s)", prj.name, options)
+		p.push("target_compile_options(\"%s\" PRIVATE", prj.name)
+		p.w(options)
+		p.pop(")")
 	end
 	timer.stop()
 end
