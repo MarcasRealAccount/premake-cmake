@@ -195,6 +195,14 @@ function m.includeDirs(prj, cfg)
 		end
 		p.pop(")")
 	end
+
+	if #cfg.externalincludedirs > 0 then
+		p.push("target_include_directories(\"%s\" SYSTEM PRIVATE", prj.name)
+		for _, includedir in ipairs(cfg.externalincludedirs) do
+			p.w("\"%s\"", includedir)
+		end
+		p.pop(")")
+	end
 	
 	if #cfg.includedirs > 0 then
 		p.push("target_include_directories(\"%s\" PRIVATE", prj.name)
