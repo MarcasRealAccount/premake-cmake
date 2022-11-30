@@ -288,14 +288,21 @@ function m.linkOptions(prj, cfg)
 	local toolset = cmake.common.getCompiler(cfg)
 	local ldflags = toolset.getldflags(cfg)
 	local options = ""
-	for _, option in ipairs(cfg.linkoptions) do
-		options = options .. option .. " "
-	end
 	for _, flag in ipairs(ldflags) do
-		options = options .. flag .. " "
+		if options:len() > 0 then
+			options = options .. " "
+		end
+		options = options .. flag
+	end
+	options = options:gsub("(%S+)", "-Wl,%1")
+	for _, option in ipairs(cfg.linkoptions) do
+		if options:len() > 0 then
+			options = options .. " "
+		end
+		options = options .. option
 	end
 	if options:len() > 0 then
-		p.w("set_target_properties(\"%s\" PROPERTIES LINK_FLAGS %s)", prj.name, options)
+		p.w("set_target_properties(\"%s\" PROPERTIES LINK_FLAGS \"%s\")", prj.name, cmake.common.escapeStrings(options))
 	end
 	timer.stop()
 end
