@@ -310,11 +310,19 @@ function m.linkOptions(prj, cfg)
 		end
 		options = options .. flag
 	end
+	for _, option in ipairs(cfg.linkoptions) do
+		if type(option) ~= "string" then
+			error("Dude, did you really just pass a " .. type(flag) .. " to    a linker option expecting a string?")
+		end
+		if options:len() > 0 then
+			options = options .. " "
+		end
+		options = options .. option
+	end
 	local default  = iif(cfg.system == p.WINDOWS, "msc", "clang")
 	local nonlinkerflags = m.nonldflags[_OPTIONS.cc or cfg.toolset or default]
 	local gsubcallback = function(w)
 		w = w:gsub("\"([^\"]*)\"", "%1")
-		print(w)
 		if nonlinkerflags then
 			local isldflag = true
 			for _, nonflag in pairs(nonlinkerflags) do
@@ -332,20 +340,9 @@ function m.linkOptions(prj, cfg)
 			return "-Wl," .. w
 		end
 	end
-	print("OPTIONS: " .. options)
 	options = options:gsub("%S+", function(w) if w:sub(1, 1) == "\"" or w:sub(-1, -1) == "\"" then return nil else return gsubcallback(w) end end)
 	options = options:gsub("%b\"\"", gsubcallback)
 
-	for _, option in ipairs(cfg.linkoptions) do
-		if type(option) ~= "string" then
-			error("Dude, did you really just pass a " .. type(flag) .. " to a linker option expecting a string?")
-		end
-		if options:len() > 0 then
-			options = options .. " "
-		end
-		options = options .. option
-	end
-	print("END OPTIONS: " .. options)
 	if options:len() > 0 then
 		p.w("set_target_properties(\"%s\" PROPERTIES LINK_FLAGS \"%s\")", prj.name, cmake.common.escapeStrings(options))
 	end
