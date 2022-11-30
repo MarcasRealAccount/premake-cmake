@@ -345,6 +345,7 @@ function m.linkOptions(prj, cfg)
 		end
 		options = options .. option
 	end
+	print("END OPTIONS: " .. options)
 	if options:len() > 0 then
 		p.w("set_target_properties(\"%s\" PROPERTIES LINK_FLAGS \"%s\")", prj.name, cmake.common.escapeStrings(options))
 	end
