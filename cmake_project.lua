@@ -18,6 +18,7 @@ end
 m.nonldflags = {
 	clang = {
 		"^%-nostdlib$",
+		"^%-l%S+$",
 		"^%-m%S+$",
 		"^%-target %S+$",
 		"^%-fuse%-ld=%S+$"
@@ -313,6 +314,7 @@ function m.linkOptions(prj, cfg)
 	local nonlinkerflags = m.nonldflags[_OPTIONS.cc or cfg.toolset or default]
 	local gsubcallback = function(w)
 		w = w:gsub("\"([^\"]*)\"", "%1")
+		print(w)
 		if nonlinkerflags then
 			local isldflag = true
 			for _, nonflag in pairs(nonlinkerflags) do
