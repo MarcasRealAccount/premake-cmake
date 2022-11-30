@@ -285,9 +285,14 @@ end
 
 function m.linkOptions(prj, cfg)
 	local timer = cmake.common.createTimer("p.extensions.cmake.project.linkOptions", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
+	local toolset = cmake.common.getCompiler(cfg)
+	local ldflags = toolset.getldflags(cfg)
 	local options = ""
 	for _, option in ipairs(cfg.linkoptions) do
 		options = options .. option .. " "
+	end
+	for _, flag in ipairs(ldflags) do
+		options = options .. flag .. " "
 	end
 	if options:len() > 0 then
 		p.w("set_target_properties(\"%s\" PROPERTIES LINK_FLAGS %s)", prj.name, options)
