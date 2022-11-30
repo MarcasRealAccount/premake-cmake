@@ -15,6 +15,15 @@ m.props = function(prj)
 	}
 end
 
+m.nonldflags = {
+	clang = {
+		"^%-nostdlib$",
+		"^%-m%S+$",
+		"^%-target %S+$",
+		"^%-fuse%-ld=%S+$"
+	}
+}
+
 function cmake.generateProject(prj)
 	prj.__cmake                = {}
 	prj.__cmake.files          = {}
@@ -273,6 +282,9 @@ function m.buildOptions(prj, cfg)
 	local timer = cmake.common.createTimer("p.extensions.cmake.project.buildOptions", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
 	local options = ""
 	for _, option in ipairs(cfg.buildoptions) do
+		if type(option) ~= "string" then
+			error("Dude, did you really just pass a " .. type(option) .. " to a build option expecting a string?")
+		end
 		options = options .. option .. "\n"
 	end
 	if options:len() > 0 then
@@ -289,13 +301,42 @@ function m.linkOptions(prj, cfg)
 	local ldflags = toolset.getldflags(cfg)
 	local options = ""
 	for _, flag in ipairs(ldflags) do
+		if type(flag) ~= "string" then
+			error("Dude, did you really just pass a " .. type(flag) .. " to a linker option expecting a string?")
+		end
 		if options:len() > 0 then
 			options = options .. " "
 		end
 		options = options .. flag
 	end
-	options = options:gsub("(%S+)", "-Wl,%1")
+	local default  = iif(cfg.system == p.WINDOWS, "msc", "clang")
+	local nonlinkerflags = m.nonldflags[_OPTIONS.cc or cfg.toolset or default]
+	local gsubcallback = function(w)
+		w = w:gsub("\"([^\"]*)\"", "%1")
+		if nonlinkerflags then
+			local isldflag = true
+			for _, nonflag in pairs(nonlinkerflags) do
+				if w:find(nonflag) then
+					isldflag = false
+					break
+				end
+			end
+			if isldflag then
+				return "-Wl," .. w
+			else
+				return w
+			end
+		else
+			return "-Wl," .. w
+		end
+	end
+	options = options:gsub("%S+", function(w) if w:sub(1, 1) == "\"" or w:sub(-1, -1) == "\"" then return nil else return gsubcallback(w) end end)
+	options = options:gsub("%b\"\"", gsubcallback)
+
 	for _, option in ipairs(cfg.linkoptions) do
+		if type(option) ~= "string" then
+			error("Dude, did you really just pass a " .. type(flag) .. " to a linker option expecting a string?")
+		end
 		if options:len() > 0 then
 			options = options .. " "
 		end
