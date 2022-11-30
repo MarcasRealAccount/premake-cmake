@@ -332,6 +332,7 @@ function m.linkOptions(prj, cfg)
 			return "-Wl," .. w
 		end
 	end
+	print("OPTIONS: " .. options)
 	options = options:gsub("%S+", function(w) if w:sub(1, 1) == "\"" or w:sub(-1, -1) == "\"" then return nil else return gsubcallback(w) end end)
 	options = options:gsub("%b\"\"", gsubcallback)
 
