@@ -55,7 +55,7 @@ function m.enableLanguages(wks)
 					if node.configs then
 						local filecfg = p.fileconfig.getconfig(node, cfg)
 						if filecfg.compileas then
-							local lang = languageToEnabledLanguage[filecfg.compileas]
+							local lang = m.languageToEnabledLanguage[filecfg.compileas]
 							if lang then
 								enabledLanguages[lang] = true
 							end
@@ -66,7 +66,7 @@ function m.enableLanguages(wks)
 		
 			local setLang = cfg.language
 			if setLang then
-				local lang = languageToEnabledLanguage[setLang]
+				local lang = m.languageToEnabledLanguage[setLang]
 				if lang then
 					enabledLanguages[lang] = true
 				end
