@@ -60,7 +60,7 @@ end
 
 function m.files(prj)
 	local timer = cmake.common.createTimer("p.extensions.cmake.project.files", { prj.name })
-	local tr = project.getsourcetree(prj)
+	local tr    = project.getsourcetree(prj)
 	tree.traverse(tr, {
 		onleaf = function(node, depth)
 			table.insert(prj.__cmake.files, node.abspath)

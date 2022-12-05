@@ -6,6 +6,13 @@ local cmake     = p.extensions.cmake
 cmake.workspace = {}
 local m         = cmake.workspace
 
+m.languageToEnabledLanguage = {
+	["C"]             = "C",
+	["C++"]           = "CXX",
+	["Objective-C"]   = "OBJC",
+	["Objective-C++"] = "OBJCXX"
+}
+
 m.props = function(wks)
 	return {
 		m.minimumRequiredVersion,
@@ -39,8 +46,36 @@ end
 
 function m.enableLanguages(wks)
 	local timer = cmake.common.createTimer("p.extensions.cmake.workspace.enableLanguages", { wks.name })
-	p.w("enable_language(OBJC)")
-	p.w("enable_language(OBJCXX)")
+	local enabledLanguages = {}
+	for prj in wks:eachproject() do
+		local tr = prj:getsourcetree()
+		for cfg in prj:eachconfig() do
+			tr:traverse({
+				onleaf = function(node, depth)
+					if node.configs then
+						local filecfg = node:getconfig(cfg)
+						if filecfg.compileas then
+							local lang = languageToEnabledLanguage[filecfg.compileas]
+							if lang then
+								enabledLanguages[lang] = true
+							end
+						end
+					end
+				end
+			}, true)
+		
+			local setLang = cfg.language
+			if setLang then
+				local lang = languageToEnabledLanguage[setLang]
+				if lang then
+					enabledLanguages[lang] = true
+				end
+			end
+		end
+	end
+	for lang, _ in pairs(enabledLanguages) do
+		p.w("enable_language(%s)", lang)
+	end
 	timer.stop()
 end
 
