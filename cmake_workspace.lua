@@ -29,9 +29,10 @@ function cmake.generateWorkspace(wks)
 	p.indent("\t")
 	p.utf8()
 	
-	wks.buildTypes = {}
+	wks.__cmake            = {}
+	wks.__cmake.buildTypes = {}
 	for cfg in workspace.eachconfig(wks) do
-		table.insert(wks.buildTypes, cmake.common.configName(cfg, #wks.platforms > 1))
+		table.insert(wks.__cmake.buildTypes, cmake.common.configName(cfg, #wks.platforms > 1))
 	end
 	
 	p.callArray(m.props, wks, buildTypes)
@@ -81,13 +82,13 @@ end
 
 function m.buildTypes(wks)
 	local timer = cmake.common.createTimer("p.extensions.cmake.workspace.buildTypes", { wks.name })
-	p.w("set(PREMAKE_BUILD_TYPES \"%s\")", table.concat(wks.buildTypes, "\" \""))
+	p.w("set(PREMAKE_BUILD_TYPES \"%s\")", table.concat(wks.__cmake.buildTypes, "\" \""))
 	p.w("get_property(multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)")
 	p.push("if(multi_config)")
 	p.w("set(CMAKE_CONFIGURATION_TYPES \"${PREMAKE_BUILD_TYPES}\" CACHE STRING \"List of supported configuration types\" FORCE)")
 	p.pop()
 	p.push("else()")
-	p.w("set(CMAKE_BUILD_TYPE \"%s\" CACHE STRING \"Build Type of the project.\")", wks.buildTypes[1])
+	p.w("set(CMAKE_BUILD_TYPE \"%s\" CACHE STRING \"Build Type of the project.\")", wks.__cmake.buildTypes[1])
 	p.w("set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS \"${PREMAKE_BUILD_TYPES}\")")
 	p.push("if(NOT CMAKE_BUILD_TYPE IN_LIST PREMAKE_BUILD_TYPES)")
 	p.push("message(FATAL_ERROR")
@@ -105,7 +106,7 @@ function m.defaultFlags(wks)
 	p.w("set(CMAKE_MSVC_RUNTIME_LIBRARY \"\")")
 	p.w("set(CMAKE_C_FLAGS \"\")")
 	p.w("set(CMAKE_CXX_FLAGS \"\")")
-	for _, buildType in ipairs(wks.buildTypes) do
+	for _, buildType in ipairs(wks.__cmake.buildTypes) do
 		p.w("set(CMAKE_C_FLAGS_%s \"\")", string.upper(buildType))
 		p.w("set(CMAKE_CXX_FLAGS_%s \"\")", string.upper(buildType))
 	end

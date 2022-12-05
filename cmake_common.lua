@@ -48,11 +48,11 @@ function m.fixSingleQuotes(command)
 	if type(command) == "table" then
 		local result = {}
 		for k, v in pairs(command) do
-			result[k] = v:gsub("'(.-)'", "\"%1\"")
+			result[k] = v:gsub("\\ ", " "):gsub("'(.-)'", "\"%1\"")
 		end
 		return result
 	else
-		return command:gsub("'(.-)'", "\"%1\"")
+		return command:gsub("\\ ", " "):gsub("'(.-)'", "\"%1\"")
 	end
 end
 
