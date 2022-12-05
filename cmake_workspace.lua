@@ -47,13 +47,13 @@ end
 function m.enableLanguages(wks)
 	local timer = cmake.common.createTimer("p.extensions.cmake.workspace.enableLanguages", { wks.name })
 	local enabledLanguages = {}
-	for prj in wks:eachproject() do
-		local tr = prj:getsourcetree()
-		for cfg in prj:eachconfig() do
-			tr:traverse({
+	for prj in workspace.eachproject(wks) do
+		local tr = project.getsourcetree(prj)
+		for cfg in project.eachconfig(prj) do
+			tree.traverse(tr, {
 				onleaf = function(node, depth)
 					if node.configs then
-						local filecfg = node:getconfig(cfg)
+						local filecfg = p.fileconfig.getconfig(node, cfg)
 						if filecfg.compileas then
 							local lang = languageToEnabledLanguage[filecfg.compileas]
 							if lang then
