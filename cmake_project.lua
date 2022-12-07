@@ -25,6 +25,17 @@ m.nonldflags = {
 	}
 }
 
+m.msvcRuntimeLibraries = {
+	On = {
+		Debug   = "MultiThreadedDebug",
+		Release = "MultiThreaded"
+	},
+	Off = {
+		Debug   = "MultiThreadedDebugDLL",
+		Release = "MultiThreadedDLL"
+	}
+}
+
 function cmake.generateProject(prj)
 	prj.__cmake                = {}
 	prj.__cmake.files          = {}
@@ -123,6 +134,7 @@ m.configProps = function(prj, cfg)
 		m.outputDirs,
 		m.includeDirs,
 		m.defines,
+		m.msvcRuntimeLibrary,
 		m.libDirs,
 		m.libs,
 		m.buildOptions,
@@ -233,6 +245,18 @@ function m.defines(prj, cfg)
 			p.w("%s", p.esc(define):gsub(" ", "\\ "))
 		end
 		p.pop(")")
+	end
+	timer.stop()
+end
+
+function m.msvcRuntimeLibrary(prj, cfg)
+	local timer = cmake.common.createTimer("p.extensions.cmake.project.runtimeLibrary", { prj.name, cmake.common.configName(cfg, #prj.workspace.platforms > 1) })
+	local static = m.msvcRuntimeLibraries[cfg.staticruntime]
+	if static then
+		local runtime = static[cfg.runtime]
+		if runtime then
+			p.w("set_property(TARGET \"%s\" PROPERTY MSVC_RUNTIME_LIBRARY \"%s\")", prj.name, runtime)
+		end
 	end
 	timer.stop()
 end
